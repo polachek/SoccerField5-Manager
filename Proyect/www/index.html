@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html>
+<!--
+  * Please see the included README.md file for license terms and conditions.
+  -->
+<head>
+    <title>Organizador partidos de Futbol</title>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" href="styles.css">
+	<link rel="stylesheet" href="assets/JQueryMobile/jquery.mobile-1.4.5.min.css">
+    <script src="assets/jquery-1.11.0.min.js"></script>
+    <script src="assets/JQueryMobile/jquery.mobile-1.4.5.min.js"></script>
+	<script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD_ZjZLm23v37js0vBRyGiavqwLWSU7DC0">
+    </script>
+	<script>
+		$(document).ready(function(){
+			iniciarBD();
+		});
+		
+		function iniciarBD() {
+			db = window.openDatabase('BDOrgFut', '1.0','BDOrganizadorFutbolero',2*1024*1024);
+			db.transaction(function(tx){
+					tx.executeSql("CREATE TABLE IF NOT EXISTS favoritos(id_user, nombre, foto, dir, tel)");
+			},errorInicio,successInicio);
+		}
+		
+		function errorInicio(){
+			console.log("Error en inicio de BD");
+		}
+		
+		function successInicio(){
+			console.log("Inicio correcto de la BD");
+		}
+		
+		
+	    /** REGISTRO **/
+		function registrar(){
+		 var usuario = $("#registro #form-registro #user").val();
+		 var passwd = $("#registro #form-registro #pass").val();
+		 var nombr = $("#registro #form-registro #nomb").val();
+		 var error_registro = '<h3 class="error no-bottom">Error</h3>';
+		 if(nombr === ''){
+			$('#registro #resp-registro').html(error_registro + '<p class="no-top error-sub">Es necesario un Nombre para el registro</p>');
+             navigator.vibrate(1000);
+		 }else
+		 if(usuario === ''){
+			$('#registro #resp-registro').html(error_registro + '<p class="no-top error-sub">Es necesario un Usuario para el registro</p>');
+             navigator.vibrate(1000);
+		 }else 
+		 if(passwd === '' || passwd == null){
+			$('#registro #resp-registro').html(error_registro + '<p class="no-top error-sub">Es necesario una contraseña para su registro</p>');
+             navigator.vibrate(1000);
+		 }else{
+			$.ajax({
+			  type: "POST",
+			  url: "http://quierojugar.tribus.com.uy/registrar",
+			  dataType: "json",
+			  data: {user: usuario, password: passwd, nombre: nombr},
+			  success: function(response){
+				$('#registro #resp-registro').html('<h3 class="ok no-bottom">Registro Exitoso</h3><p class="no-top ok-sub">Bienvenido a nuestro sistema</p>');
+			  },
+			  error: function(jqXHR, exception){
+				 var msg = '';
+				if (jqXHR.status === 0) {
+					msg = 'No se pudo conectar al servidor';
+				} else if (jqXHR.status == 404) {
+					msg = 'Pagina no encontrada. [404]';
+				} else if (jqXHR.status == 500) {
+					msg = 'Error de servidor [500].';
+				} else if (exception === 'timeout') {
+					msg = 'Tiempo de espero agotado';
+				} else if (exception === 'abort') {
+					msg = 'Peticion abortada';
+				} else {
+					msg = 'Error.\n' + jqXHR.responseText;
+				}
+				if(jqXHR.hasOwnProperty("responseJSON")){
+						msg = msg + jqXHR.responseJSON.mensaje;
+				}
+				$('#registro #resp-registro').html(error_registro + "<p class='no-top error-sub'>"+msg+"</p>");
+                  navigator.vibrate(1000);
+			  }
+			})
+			}
+		}
+		/** /REGISTRO **/
+		
+		function clear_login(){
+			$('#login #resp-login').html("Ingrese los datos para loguarse en la aplicación");
+			$("#login #form-login #user").val("");
+			$("#login #form-login #pass").val("");
+		}
+		
+		function clear_registrar(){
+			$('#registro #resp-registro').html("Ingrese los datos para registrarse");
+			$("#registro #form-registro #user").val("");
+			$("#registro #form-registro #pass").val("");
+			$("#registro #form-registro #nomb").val("");
+		}
+		
+		/** LOGIN **/
+		function login(){
+		 var usuario = $("#login #form-login #user").val();
+		 var passwd = $("#login #form-login #pass").val();
+		 var error_registro = '<h3 class="error no-bottom">Error</h3>';
+		 if(usuario === ''){
+             navigator.vibrate(1000);
+			$('#login #resp-login').html(error_registro + '<p class="no-top error-sub">Es necesario un Usuario para el acceso</p>');
+		 }else 
+		 if(passwd === '' || passwd == null){
+             navigator.vibrate(1000);
+			$('#login #resp-login').html(error_registro + '<p class="no-top error-sub">Es necesario una contraseña para ingresar</p>');
+		 }else{
+			$.ajax({
+			  type: "GET",
+			  url: "http://quierojugar.tribus.com.uy/login",
+			  dataType: "json",
+			  data: {user: usuario, password: passwd},
+			  success: function(response){
+				if(response.resultado_login){
+					$('#login #resp-login').html('<h3 class="ok no-bottom">Login Exitoso</h3><p class="no-top ok-sub">Bienvenido a nuestro sistema<br /> Redireccionando al panel de control en 3 segundos </p>');
+					localStorage.setItem("id_usuario", response.id_usuario);
+					window.setTimeout(function() {
+						var pathname = window.location.pathname;
+						window.location.href = pathname + '#panel'; }, 3000);
+				}else{
+                    navigator.vibrate(1000);
+					$('#login #resp-login').html(error_registro + '<p class="no-top error-sub">Usuario y contraseña incorrectos</p>');
+				}				
+			  },
+			  error: function(jqXHR, exception){
+				 var msg = '';
+				if (jqXHR.status === 0) {
+					msg = 'No se pudo conectar al servidor';
+				} else if (jqXHR.status == 404) {
+					msg = 'Pagina no encontrada. [404]';
+				} else if (jqXHR.status == 500) {
+					msg = 'Error de servidor [500].';
+				} else if (exception === 'timeout') {
+					msg = 'Tiempo de espero agotado';
+				} else if (exception === 'abort') {
+					msg = 'Peticion abortada';
+				} else {
+					msg = 'Error.\n' + jqXHR.responseText;
+				}
+				if(jqXHR.hasOwnProperty("responseJSON")){
+						msg = msg + jqXHR.responseJSON.mensaje;
+				}
+				$('#login #resp-login').html(error_registro + "<p class='no-top error-sub'>"+msg+"</p>");
+			  }
+			});
+			}
+		}
+		
+		function cerrar_sesion(){
+			localStorage.removeItem("id_usuario");
+			window.location.href = window.location.pathname;
+		}
+		/** /LOGIN **/
+		
+		/** VER CANCHAS **/
+		function cargar_canchas(){
+			$("#listaCanchas").empty();
+			$.ajax({
+					beforeSend: function() { mostrarLoader( 'show'); },
+					complete: function() { mostrarLoader( 'hide'); }, 
+					url:'http://quierojugar.tribus.com.uy/getCanchas',
+					type:'GET',
+					dataType:'json',
+					success: function(response){
+						for(var i = 0; i< response.canchas.length; i++)
+						{
+							$("#listaCanchas").append("<li><a href='#detalleCancha' data-transition='slide' onclick='detalle_Cancha($(this).data(\"id\"))' data-id='"+response.canchas[i].nombre+"'><img src='http://quierojugar.tribus.com.uy/canchas/"+response.canchas[i].foto_inicial+"'/><h2>"+response.canchas[i].nombre+"</h2><p>"+response.canchas[i].direccion+"</p></a></li>");
+						}
+						$( "#listaCanchas" ).listview( "refresh" );
+						
+					},
+					error: function(err)
+					{
+						console.log("error! -> " + err);
+					}
+			});
+		}
+		
+		/** /VER CANCHAS **/
+		
+		/** DETALLE CANCHA **/
+		function detalle_Cancha(id){
+			$("#detalleCancha #cancha-tit").empty();
+			$("#detalleCancha #cancha-dir").empty();
+			$("#detalleCancha #cancha-tel").empty();
+			$("#detalleCancha #map-canvas").empty();
+			$("#btn_verPartidos").empty();
+			$("#detalleCancha #btn_favorito_cancha").html("");
+			$("#listadPartidos").hide();
+			$("#listaPartidosCancha").empty();
+			$.ajax({
+					url:'http://quierojugar.tribus.com.uy/getCancha',
+					type:'GET',
+					dataType:'json',
+					data: {nombre:id},
+					beforeSend: function() { mostrarLoader( 'show'); },
+					complete: function (data) {
+						chequeo_favorita(id); 
+						mostrarLoader( 'hide');
+					},
+					success: function(response){
+						$("#detalleCancha #cancha-tit").html(response.cancha.nombre);
+						$("#detalleCancha #cancha-dir").html(response.cancha.direccion);
+						$("#detalleCancha #cancha-tel").html(response.cancha.telefono);
+						$('#btn_verPartidos').data('id',response.cancha.nombre);
+						$('#btn_verPartidos').attr('onClick', 'ver_Partidos_Cancha($(this).data(\"id\"));');
+						$("#btn_verPartidos").html('Ver Partidos');
+						$("#btn_verPartidos").buttonMarkup({ icon: "arrow-d" });
+						$('#btn_favorito_cancha').data('id',response.cancha.nombre).data('foto',response.cancha.foto_inicial).data('dir',response.cancha.direccion).data('tel',response.cancha.telefono);
+						var cancha_Lat = response.cancha.ubicacion.latitud;
+						var cancha_Lon = response.cancha.ubicacion.longitud
+						cargar_Mapa(cancha_Lat, cancha_Lon);
+					},
+					error: function(err)
+					{
+						console.log("error! -> " + err);
+					}
+				});
+		}
+		
+		// Carga de Mapa
+		function cargar_Mapa(cancha_Lat, cancha_Lon){
+			var uluru = {lat: cancha_Lat, lng: cancha_Lon};
+			var map = new google.maps.Map(document.getElementById('map-canvas'), {
+			  zoom: 15,
+			  center: uluru
+			});
+			var marker = new google.maps.Marker({
+			  position: uluru,
+			  map: map
+			});
+
+		}
+		/** /DETALLE CANCHA **/
+		
+		/** VER PARTIDOS DE CANCHA **/
+		function ver_Partidos_Cancha(id){
+			$("#listaPartidosCancha").empty();
+			$.ajax({
+					url:'http://quierojugar.tribus.com.uy/getPartidos',
+					type:'GET',
+					dataType:'json',
+					data: {nombreCancha:id},
+					beforeSend: function() { mostrarLoader( 'show'); },
+					complete: function (data) {
+						mostrarLoader( 'hide');
+						$( "#listadPartidos" ).slideDown( "slow" );
+						$("#btn_verPartidos").html('Cerrar Partidos'); 
+						$('#btn_verPartidos').attr('onClick', 'cerrar_Partidos_Cancha();');
+						$("#btn_verPartidos").buttonMarkup({ icon: "arrow-u" });
+					},
+					success: function(response){
+						if(response.partidos.length > 0){
+							for(var i = 0; i< response.partidos.length; i++)
+							{
+								$("#listaPartidosCancha").append("<div data-role='collapsible' class='ui-collapsible ui-collapsible-themed-content'><h4>"+ response.partidos[i].nombre +"</h4>"+
+									"<p><b>ID: </b>"+ response.partidos[i].id + "<br />" +
+									"<b>Nombre: </b>"+ response.partidos[i].nombre + "<br />" +
+									"<b>Cantidad Jugadores: </b>"+ response.partidos[i].cantidad_jugadores + "<br /></p>" +
+									"<a href='#msg_reg_partido' data-position-to='window' data-rel='popup' onclick='inscripcion_Partido($(this).data(\"idusuario\"), $(this).data(\"idpartido\"), $(this).data(\"cantjug\"))' data-idusuario='"+localStorage.getItem("id_usuario")+"' data-idpartido='"+response.partidos[i].id+"' data-cantjug='"+response.partidos[i].cantidad_jugadores+"'>Inscribirse al Partido</a></div>"
+								);
+							}
+							$("#listaPartidosCancha").collapsibleset();
+							$("#listadPartidos").trigger( "create" );
+						}else{
+								$("#listaPartidosCancha").append("<p>No hay partidos asociados a esta cancha</p>");
+						}
+					},
+					error: function(err)
+					{
+						console.log("error! -> " + err);
+					}
+			});
+		}
+		
+		function cerrar_Partidos_Cancha(){
+			$('#btn_verPartidos').attr('onClick', 'slide_PartidosCancha()');
+			$("#btn_verPartidos").html('Ver Partidos'); 
+			$( "#listadPartidos" ).slideUp( "slow" );
+			$("#btn_verPartidos").buttonMarkup({ icon: "arrow-d" });
+		}
+		
+		function slide_PartidosCancha(){
+			$( "#listadPartidos" ).slideDown( "slow" );
+			$("#btn_verPartidos").html('Cerrar Partidos'); 
+			$('#btn_verPartidos').attr('onClick', 'cerrar_Partidos_Cancha();');
+			$("#btn_verPartidos").buttonMarkup({ icon: "arrow-u" });
+		}
+		
+		/** /VER PARTIDOS DE CANCHA **/
+		
+		/** INSCRIPCION A PARTIDO **/
+		function inscripcion_Partido(idusuario, idpartido, cantjug){
+			$('#msg_reg_partido').empty()
+			if(cantjug >= 10){
+				$('#msg_reg_partido').html('<h3 class="error no-bottom">Error</h3><p class="no-top error-sub">El Partido no admite mas cupos</p>');
+			}else{
+				$.ajax({
+					url:'http://quierojugar.tribus.com.uy/inscribirseAPartido',
+					type:'POST',
+					dataType:'json',
+					data: {idUsuario:idusuario, idPartido:idpartido},
+					success: function(response){
+						if(response.retorno == "OK"){
+							$('#msg_reg_partido').html('<h3 class="ok no-bottom">Inscripcion Exitosa</h3><div id="datos_Partido"></div>');
+							cargar_datos_partido(idpartido);
+						}else{
+							$('#msg_reg_partido').html('<h3 class="error no-bottom">Error</h3><p class="no-top error-sub">Algo a malio sal</p>');
+						}
+					},
+					error: function(jqXHR, exception){
+						 var msg = '';
+						if (jqXHR.status === 0) {
+							msg = 'No se pudo conectar al servidor';
+						} else if (jqXHR.status == 404) {
+							msg = 'Pagina no encontrada. [404]';
+						} else if (jqXHR.status == 500) {
+							msg = "Error [500].";
+						} else if (exception === 'timeout') {
+							msg = 'Tiempo de espero agotado';
+						} else if (exception === 'abort') {
+							msg = 'Peticion abortada';
+						} else {
+							msg = 'Error.\n' + jqXHR.responseText;
+						}
+						if(jqXHR.hasOwnProperty("responseJSON")){
+							msg = msg + jqXHR.responseJSON.mensaje;
+						}
+						$('#msg_reg_partido').html('<h3 class="error no-bottom">Error</h3><p class="no-top error-sub">'+msg+'</p>');
+						
+					}
+				});
+			}
+		}
+		
+		function cargar_datos_partido(idpartido){
+			$('#detalleCancha #msg_reg_partido #datos_Partido').empty();
+			$.ajax({
+				url:'http://quierojugar.tribus.com.uy/getPartido',
+				type:'GET',
+				dataType:'json',
+				data: {idPartido:idpartido},
+				success: function(response){
+					if(response.retorno == "OK"){
+						if(response.partido.cantidad_jugadores > 1){
+							$('#detalleCancha #msg_reg_partido #datos_Partido').html('<p class="no-top ok-sub">Los integrantes del partido son:</p><ul id="integrantes_partido">');
+							for(var i = 0; i< response.partido.jugadores.length; i++)
+							{
+								$('#detalleCancha #datos_Partido #integrantes_partido').append("<li> - "+ response.partido.jugadores[i] + "</li>");
+							}
+							$('#detalleCancha #datos_Partido #integrantes_partido').append("</ul>");
+						}else{
+							$('#detalleCancha #msg_reg_partido #datos_Partido').html('<p class="no-top ok-sub">Sos el primer inscripto al partido :D</p>');
+						}
+					}else{
+						$('#detalleCancha #msg_reg_partido #datos_Partido').html('<h3 class="error no-bottom">Error</h3><p class="no-top error-sub">Algo a malio sal</p>');
+					}
+				},
+				error: function(jqXHR, exception){
+					 var msg = '';
+					if (jqXHR.status === 0) {
+						msg = 'No se pudo conectar al servidor';
+					} else if (jqXHR.status == 404) {
+						msg = 'Pagina no encontrada. [404]';
+					} else if (jqXHR.status == 500) {
+						msg = "Error [500].";
+					} else if (exception === 'timeout') {
+						msg = 'Tiempo de espero agotado';
+					} else if (exception === 'abort') {
+						msg = 'Peticion abortada';
+					} else {
+						msg = 'Error.\n' + jqXHR.responseText;
+					}
+					if(jqXHR.hasOwnProperty("responseJSON")){
+							msg = msg + jqXHR.responseJSON.mensaje;
+					}
+					$('#msg_reg_partido').html('<h3 class="error no-bottom">Error</h3><p class="no-top error-sub">'+msg+'</p>');
+					
+				}
+			});
+			
+		}
+		
+		/** /INSCRIPCION A PARTIDO **/
+		
+		/** AGREGAR CANCHA A FAVORITOS **/
+		function cancha_favoritos(nombre, foto, dir, tel){
+			var miUser= localStorage.getItem("id_usuario");
+			db.transaction(function(tx){
+				tx.executeSql("INSERT INTO favoritos (id_user, nombre, foto, dir, tel) values ('"+miUser+"','"+nombre+"','"+foto+"','"+dir+"','"+tel+"')",[],function(tx,results){
+					chequeo_favorita(nombre);
+				});
+			},errorFav,successFav);
+		}
+		
+		function cancha_favoritos_quitar(nombre){
+			var miUser= localStorage.getItem("id_usuario");
+			db.transaction(function(tx){
+				tx.executeSql("DELETE FROM favoritos WHERE nombre='"+nombre+"' AND id_user='"+miUser+"'",[],function(tx,results){
+					chequeo_favorita(nombre);
+				});
+			},errorFav,successFav);
+		}
+		
+		function errorFav(){}
+		
+		function successFav(){}
+		
+		function cargar_canchas_Fav(){
+			$("#canchasFav #listaCanchasFav").empty();
+			var miUser= localStorage.getItem("id_usuario");
+			db.transaction(function(tx){
+				tx.executeSql("SELECT * FROM favoritos WHERE id_user='"+miUser+"'",[],function(tx,results){
+					if(results.rows.length == 0){
+						$("#canchasFav #listaCanchasFav").html("<h2>Aún no has seleccionado canchas como favoritas</h2>");
+					}else{
+						for(var i = 0; i<results.rows.length; i++)
+						{
+							$("#canchasFav #listaCanchasFav").append("<li><a href='#detalleCancha' onclick='detalle_Cancha($(this).data(\"id\"))' data-id='"+results.rows.item(i).nombre+"'><img src='http://quierojugar.tribus.com.uy/canchas/"+results.rows.item(i).foto+"'/><h2>"+results.rows.item(i).nombre+"</h2><p>"+results.rows.item(i).dir+"</p></a></li>");
+						}
+						$( "#canchasFav #listaCanchasFav" ).listview( "refresh" );
+					}
+				});
+			});
+		}
+		
+		// Chequeo si ya es favorita
+		function chequeo_favorita(id){
+			db.transaction(function(tx){
+				tx.executeSql("SELECT nombre FROM favoritos where nombre='"+id+"'",[],function(tx,results){
+					if(results.rows.length > 0){
+						$("#detalleCancha #btn_favorito_cancha").html("Quitar de Favoritos");
+						$("#detalleCancha #btn_favorito_cancha").buttonMarkup({ icon: "delete" });
+						$("#detalleCancha #btn_favorito_cancha").css("background-color", "#F6CECE");
+						$("#detalleCancha #btn_favorito_cancha").attr('onClick', 'cancha_favoritos_quitar($(this).data(\"id\"));');
+					}else{
+						$("#detalleCancha #btn_favorito_cancha").html("Agregar a Favoritos");
+						$("#detalleCancha #btn_favorito_cancha").buttonMarkup({ icon: "star" });
+						$("#detalleCancha #btn_favorito_cancha").css("background-color", "#E0F8EC");
+						$("#detalleCancha #btn_favorito_cancha").attr('onClick', 'cancha_favoritos($(this).data(\"id\"), $(this).data(\"foto\"), $(this).data(\"dir\"), $(this).data(\"tel\"));');
+					}
+				});
+			});
+		}
+		
+		/** /AGREGAR CANCHA A FAVORITOS **/
+		
+		/** LOADER **/
+		function mostrarLoader( accionLoader ) {
+			setTimeout( function(){
+				$.mobile.loading( accionLoader, {
+					text: 'Cargando',
+					textVisible: true,
+				});
+			}, 1); 
+		}		
+		/** /LOADER **/
+		
+		/** CREAR PARTIDO **/
+		// Carga de canchas
+		function cargar_canchas_part(){
+			$("#crearPartidoCanchas #listaCanchasPart").empty();
+			$.ajax({
+					beforeSend: function() { mostrarLoader( 'show'); },
+					complete: function() { mostrarLoader( 'hide'); }, 
+					url:'http://quierojugar.tribus.com.uy/getCanchas',
+					type:'GET',
+					dataType:'json',
+					success: function(response){
+						for(var i = 0; i< response.canchas.length; i++)
+						{
+							$("#crearPartidoCanchas #listaCanchasPart").append("<li><a href='#creacion_partido' onclick='crear_Partido_form($(this).data(\"id\"))' data-id='"+response.canchas[i].nombre+"'><img src='http://quierojugar.tribus.com.uy/canchas/"+response.canchas[i].foto_inicial+"'/><h2>"+response.canchas[i].nombre+"</h2><p>"+response.canchas[i].direccion+"</p></a></li>");
+						}
+						$( "#crearPartidoCanchas #listaCanchasPart" ).listview( "refresh" );
+						
+					},
+					error: function(err)
+					{
+						console.log("error! -> " + err);
+					}
+			});
+		}
+		
+		//Form Crear Partido
+		function crear_Partido_form(id){
+			$("#creacion_partido #nomCancha").val(id);
+			$('#creacion_partido #resp-part').empty();
+			$("#creacion_partido #nomPart").val('');
+		}
+		
+		//Crear Partido
+		function crear_Partido(){
+			var nomCancha = $("#creacion_partido #nomCancha").val();
+			var miUser= localStorage.getItem("id_usuario");
+			var nomPartido = $("#creacion_partido #nomPart").val();
+     		var error_partido = '<h3 class="error no-bottom">Error</h3>';
+			 if(nomPartido == ''){
+				$('#creacion_partido #resp-part').html(error_partido + '<p class="no-top error-sub">Es necesario un nombre de partido</p>');
+			 }else 
+			 if(miUser == '' || miUser == null){
+				$('#creacion_partido #resp-part').html(error_partido + '<p class="no-top error-sub">Es necesario estar logueado en el sistema</p>');
+			 }else 
+			 if(nomCancha == ''){
+				$('#creacion_partido #resp-part').html(error_partido + '<p class="no-top error-sub">No se seleccionó una cancha</p>');
+			 }else{
+			$.ajax({
+			  type: "POST",
+			  url: "http://quierojugar.tribus.com.uy/crearPartido",
+			  dataType: "json",
+			  data: {nombreCancha: nomCancha, nombrePartido: nomPartido, idUsuario : miUser},
+			  success: function(response){
+				if(response.retorno == "OK"){
+					$('#creacion_partido #resp-part').html('<h3 class="ok no-bottom">Creación Exitosa</h3><p class="no-top ok-sub">El partido <b>'+ nomPartido +'</b> para la cancha <b>'+ nomCancha +'</b> fue creado</p>');
+					$("#creacion_partido #nomPart").val('');
+				}else{
+					$('#creacion_partido #resp-part').html('<h3 class="error no-bottom">Error</h3><p class="no-top error-sub">Algo a malio sal</p>');
+				}
+							
+			  },
+			  error: function(jqXHR, exception){
+				 var msg = '';
+				if (jqXHR.status === 0) {
+					msg = 'No se pudo conectar al servidor';
+				} else if (jqXHR.status == 404) {
+					msg = 'Pagina no encontrada. [404]';
+				} else if (jqXHR.status == 500) {
+					msg = 'Error de servidor [500].';
+				} else if (exception === 'timeout') {
+					msg = 'Tiempo de espero agotado';
+				} else if (exception === 'abort') {
+					msg = 'Peticion abortada';
+				} else {
+					msg = 'Error.\n' + jqXHR.responseText;
+				}
+				$('#creacion_partido #resp-part').html(error_partido + "<p class='no-top error-sub'>"+msg+"</p>");
+			  }
+			});
+			}
+		}
+		/** /CREAR PARTIDO **/
+        
+        /** VER CANCHAS Cercanas**/
+		function canchas_Cercanas(){
+            $("#listaCanchasCercanas").empty();
+            navigator.geolocation.getCurrentPosition(onSuccessGeo, onErrorGeo);
+		}
+        
+    function onSuccessGeo(position) {
+        $( "#canchasCercanas #geo-error" ).html("");
+         var latMovil = position.coords.latitude;
+         var lonMOvil = position.coords.longitude;
+         var timestampMovil = position.timestamp;
+            $.ajax({
+                    beforeSend: function() { mostrarLoader( 'show'); },
+                    complete: function() { mostrarLoader( 'hide'); }, 
+                    url:'http://quierojugar.tribus.com.uy/noSeSiSeraDemasiado',
+                    type:'GET',
+                    dataType:'json',
+                    data: {latO: latMovil, longO: lonMOvil},
+                    success: function(response){
+						var distancia_cancha = 0;
+						var lat_cancha = 0;
+						var lon_cancha = 0;
+                        for(var i = 0; i< response.canchas.length; i++)
+                        {
+							distancia_cancha = response.canchas[i].distancia.toFixed(2);
+							lat_cancha = response.canchas[i].ubicacion.latitud;
+							lon_cancha = response.canchas[i].ubicacion.longitud;
+                            $("#listaCanchasCercanas").append("<li data-icon='carat-u'><a href='#comoLlegar' data-transition='slidedown' onclick='como_llegar($(this).data(\"id\"), "+latMovil+", "+lonMOvil+", "+lat_cancha+", "+lon_cancha+")' data-id='"+response.canchas[i].nombre+"'><img src='http://quierojugar.tribus.com.uy/canchas/"+response.canchas[i].foto_inicial+"'/><h1>Distancia: "+distancia_cancha+" Km</h1><h2>"+response.canchas[i].nombre+"</h2><p>"+response.canchas[i].direccion+"</p></a></li>");
+                        }
+                        $( "#listaCanchasCercanas" ).listview( "refresh" );
+
+
+                    },
+                    error: function(err)
+                    {
+                        $( "#canchasCercanas #geo-error" ).html("Error al cargar Geolocalizacion");
+                    }
+                 });
+    }
+
+    function onErrorGeo(error) {
+        $( "#canchasCercanas #geo-error" ).html("Error al obtener su Geolocalizacion");
+    }
+	
+	function como_llegar(cancha, latMovil, lonMOvil, lat_cancha, lon_cancha) {
+		$('#comoLlegar #tit-cancha').empty();
+		$('#comoLlegar #map-comollegar').empty();
+		$('#comoLlegar #instrucciones').empty();
+		$("#comoLlegar #verCancha").attr('onClick', 'detalle_Cancha("'+cancha+'");');
+		$("#comoLlegar #verCancha").attr('href', '#detalleCancha');
+		$('#comoLlegar #tit-cancha').html(cancha);
+		
+		var origen = {lat: latMovil, lng: lonMOvil};
+        var destino = {lat: lat_cancha, lng: lon_cancha};
+
+        var mapComoLlegar = new google.maps.Map(document.getElementById('map-comollegar'), {
+          center: origen,
+          zoom: 15
+        });
+
+        var directionsDisplay = new google.maps.DirectionsRenderer;
+        var directionsService = new google.maps.DirectionsService;
+		
+		directionsDisplay.setMap(mapComoLlegar);
+        directionsDisplay.setPanel(document.getElementById('instrucciones'));
+
+        // Set destination, origin and travel mode.
+        var request = {
+          destination: destino,
+          origin: origen,
+          travelMode: 'DRIVING'
+        };
+
+        // Pass the directions request to the directions service.
+        //var directionsService = new google.maps.DirectionsService();
+        directionsService.route(request, function(response, status) {
+          if (status == 'OK') {
+            // Display the route on the map.
+            directionsDisplay.setDirections(response);
+          }
+        });
+		
+    }
+		
+		/** /VER CANCHAS Cercanas **/
+		</script>
+</head>
+
+
+<body>
+    <!-- Home -->
+    <div data-role="page" id="home">
+ 
+        <div data-role="header">
+            <h1>Organizador Futbolero</h1>
+        </div>
+ 
+        <div role="main" class="ui-content">
+			<img id="logo" src="images/logo.png" style="display:block; width:75%; height: auto; margin: 0 auto;"/>
+			<h1>Bienvenido al Organizador Futbolero</h1>
+			<p>Por favor ingrese sesion o registrece en nuestro sistema para realizar acciones</p>
+			<a href="#registro" onclick='clear_registrar()' class="ui-btn">Registrarse</a>
+			<a href="#login" onclick='clear_login()' class="ui-btn">Ingresar</a>	
+				
+		</div>
+ 
+        <div data-role="footer" data-position="fixed">
+            <h4>Guillermo Polachek - 153924</h4>
+        </div>
+ 
+    </div>
+	<!-- /Home -->
+	
+	
+	<!-- Registro -->
+    <div data-role="page" id="registro">
+ 
+        <div data-role="header">
+			<a href="#" data-icon="back" data-rel="back" title="Go back">Atrás</a>
+            <h1>Registro - Organizador Futbolero</h1>
+        </div>
+ 
+        <div role="main" class="ui-content">
+			<form id="form-registro">
+				<div style="padding:10px 20px;">
+					<div id="resp-registro">Ingrese los datos para registrarse</div>
+					<label for="nomb" class="ui-hidden-accessible">Nombre:</label>
+					<input type="text" name="nomb" id="nomb" value="" placeholder="Nombre" required="required" data-theme="a" />
+					<label for="user" class="ui-hidden-accessible">Usuario:</label>
+					<input type="text" name="user" id="user" value="" placeholder="Usuario" required="required" data-theme="a" />
+					<label for="pass" class="ui-hidden-accessible">Password:</label>
+					<input type="password" name="pass" id="pass" value="" placeholder="Contraseña" data-theme="a" required="required" />
+					<button type="button" onclick='registrar()' class="ui-btn ui-corner-all ui-shadow ui-btn-b ui-btn-icon-left ui-icon-check">Registrar</button>
+				</div>
+			</form>				
+		</div>
+ 
+        <div data-role="footer" data-position="fixed">
+            <h4>Guillermo Polachek - 153924</h4>
+        </div>
+ 
+    </div>
+	<!-- /Registro -->
+	
+	<!-- Login -->
+    <div data-role="page" id="login">
+ 
+        <div data-role="header">
+			<a href="#" data-icon="back" data-rel="back" title="Go back">Atrás</a>
+            <h1>Login - Organizador Futbolero</h1>
+        </div>
+ 
+        <div role="main" class="ui-content">
+			<form id="form-login">
+				<div style="padding:10px 20px;">
+					<div id="resp-login">Ingrese los datos para loguarse en la aplicación</div>
+					<label for="user" class="ui-hidden-accessible">Usuario:</label>
+					<input type="text" name="user" id="user" value="" placeholder="Usuario" required="required" data-theme="a" />
+					<label for="pass" class="ui-hidden-accessible">Password:</label>
+					<input type="password" name="pass" id="pass" value="" placeholder="Contraseña" data-theme="a" required="required" />
+					<button type="button" onclick='login()' class="ui-btn ui-corner-all ui-shadow ui-btn-b ui-btn-icon-left ui-icon-check">Login</button>
+				</div>
+			</form>				
+		</div>
+ 
+        <div data-role="footer" data-position="fixed">
+            <h4>Guillermo Polachek - 153924</h4>
+        </div>
+ 
+    </div>
+	<!-- /Login -->
+	
+	<!-- Panel administracion -->
+    <div data-role="page" id="panel">
+ 
+        <div data-role="header">
+            <h1>Panel - Organizador Futbolero</h1>
+			<a onclick='cerrar_sesion()' data-icon="user" class="ui-btn-right" title="Cerrar Sesion">Cerrar Sesion</a>
+        </div>
+ 
+        <div role="main" class="ui-content">
+			<h1> Panel Administracion </h1>	
+			<a href="#canchas" onclick='cargar_canchas()' class="ui-btn">Ver Canchas y Partidos</a>
+			<a href="#crearPartidoCanchas" onclick='cargar_canchas_part()' class="ui-btn">Crear Partido</a>
+			<a href="#canchasFav" data-role="button" data-icon="star" onclick='cargar_canchas_Fav()'>Ver Canchas - Favoritas</a>
+            <a href="#canchasCercanas" data-role="button" class="ui-btn" onclick='canchas_Cercanas()'>Ver Canchas cercanas a tu hubicacion</a>
+		</div>
+ 
+        <div data-role="footer" data-position="fixed">
+            <h4>Guillermo Polachek - 153924</h4>
+        </div>
+ 
+    </div>
+	<!-- /Panel administracion -->
+	
+	<!-- Canchas -->
+    <div data-role="page" id="canchas">
+ 
+        <div data-role="header" data-position="fixed">
+			<a href="#" data-icon="back" data-rel="back" title="Go back">Atrás</a>
+            <h1>Canchas - Organizador Futbolero</h1>
+			<a onclick='cerrar_sesion()' data-icon="user" class="ui-btn-right" title="Cerrar Sesion">Cerrar Sesion</a>
+        </div>
+ 
+        <div role="main" class="ui-content">
+			<h1> Listado de Canchas </h1>	
+			<ul id="listaCanchas" data-role="listview" data-inset="true">
+				
+			</ul>
+		</div>
+ 
+        <div data-role="footer" data-position="fixed">
+            <h4>Guillermo Polachek - 153924</h4>
+        </div>
+ 
+    </div>
+	<!-- /Canchas -->
+	
+	<!-- Canchas Favoritas -->
+    <div data-role="page" id="canchasFav">
+ 
+        <div data-role="header" data-position="fixed">
+			<a href="#" data-icon="back" data-rel="back" title="Go back">Atrás</a>
+            <h1>Canchas Favoritas - Organizador Futbolero</h1>
+			<a onclick='cerrar_sesion()' data-icon="user" class="ui-btn-right" title="Cerrar Sesion">Cerrar Sesion</a>
+        </div>
+ 
+        <div role="main" class="ui-content">
+			<h1> Listado de Canchas Favoritas </h1>	
+			<ul id="listaCanchasFav" data-role="listview" data-inset="true">
+				
+			</ul>
+		</div>
+ 
+        <div data-role="footer" data-position="fixed">
+            <h4>Guillermo Polachek - 153924</h4>
+        </div>
+ 
+    </div>
+	<!-- /Canchas -->
+	
+	<!-- Detalle Cancha -->
+    <div data-role="page" id="detalleCancha">
+ 
+        <div data-role="header" data-position="fixed">
+			<a href="#" data-icon="back" data-rel="back" data-direction="reverse" title="Go back">Atrás</a>
+            <h1>Detalle de Cancha - Organizador Futbolero</h1>
+			<a onclick='cerrar_sesion()' data-icon="user" class="ui-btn-right" title="Cerrar Sesion">Cerrar Sesion</a>
+        </div>
+ 
+        <div role="main" class="ui-content">
+			<h1 id="cancha-tit"></h1>
+			<p>Direccion: <span id="cancha-dir"><span></p>
+			<p>Telefono: <span id="cancha-tel"><span></p>
+			<a data-role="button" id="btn_favorito_cancha" data-icon="star" data-inline="true">Agregar a Favoritos</a>
+			<a id="btn_verPartidos" data-role="button" data-icon="arrow-d" data-id="">Ver Partidos</a>
+			<div style="display:none;" id="listadPartidos">
+				<form>
+					<input data-type="search" id="searchForCollapsibleSet" placeholder="Buscar Partidos">
+				</form>
+				<div id="listaPartidosCancha" data-filter="true" data-input="#searchForCollapsibleSet"></div>
+			</div>
+			<div id="map-canvas">Mapa</div>
+			<div data-role="popup" id="msg_reg_partido" data-overlay-theme="a">
+				<h1>Contenido</h1>
+			</div>	
+		</div>
+ 
+        <div data-role="footer" data-position="fixed">
+            <h4>Guillermo Polachek - 153924</h4>
+        </div>
+ 
+    </div>
+	<!-- /Detalle Cancha -->
+	
+	<!-- Crear Partido - Canchas -->
+    <div data-role="page" id="crearPartidoCanchas">
+ 
+        <div data-role="header" data-position="fixed">
+			<a href="#" data-icon="back" data-rel="back" title="Go back">Atrás</a>
+            <h1>Crear Partido - Canchas - Organizador Futbolero</h1>
+			<a onclick='cerrar_sesion()' data-icon="user" class="ui-btn-right" title="Cerrar Sesion">Cerrar Sesion</a>
+        </div>
+ 
+        <div role="main" class="ui-content">
+			<h1>Seleccione una cancha</h1>
+			<p>Para la creación del partido</p>
+			<ul id="listaCanchasPart" data-role="listview" data-inset="true">
+				
+			</ul>
+		</div>
+ 
+        <div data-role="footer" data-position="fixed">
+            <h4>Guillermo Polachek - 153924</h4>
+        </div>
+ 
+    </div>
+	<!-- /Crear Partido -Canchas -->
+	
+	<!-- Crear Partido - Form -->
+    <div data-role="page" id="creacion_partido">
+ 
+        <div data-role="header" data-position="fixed">
+			<a href="#" data-icon="back" data-rel="back" title="Go back">Atrás</a>
+            <h1>Crear Partido - Organizador Futbolero</h1>
+			<a onclick='cerrar_sesion()' data-icon="user" class="ui-btn-right" title="Cerrar Sesion">Cerrar Sesion</a>
+        </div>
+ 
+        <div role="main" class="ui-content">
+			<form id="form_creacion_partido">
+				<div style="padding:10px 20px;">
+					<div id="resp-part"></div>
+					<label for="nomPart">Ingrese el nombre del Partido:</label>
+					<input type="text" name="nomPart" id="nomPart" value="" placeholder="Nombre de Partido" required="required" data-theme="a" />
+					<label for="nomCancha">Cancha:</label>
+					<input type="text" disabled="disabled" name="nomCancha" id="nomCancha" value="">
+					<button type="button" onclick='crear_Partido()' class="ui-btn ui-corner-all ui-shadow ui-btn-b ui-btn-icon-left ui-icon-check">Crear Partido</button>
+				</div>
+			</form>	
+		</div>
+ 
+        <div data-role="footer" data-position="fixed">
+            <h4>Guillermo Polachek - 153924</h4>
+        </div>
+ 
+    </div>
+	<!-- /Crear Partido -Canchas -->
+            
+    <!-- Canchas Cercanas -->
+    <div data-role="page" id="canchasCercanas">
+ 
+        <div data-role="header" data-position="fixed">
+			<a href="#" data-icon="back" data-rel="back" title="Go back">Atrás</a>
+            <h1>Canchas Cercanas- Organizador Futbolero</h1>
+			<a onclick='cerrar_sesion()' data-icon="user" class="ui-btn-right" title="Cerrar Sesion">Cerrar Sesion</a>
+        </div>
+ 
+        <div role="main" class="ui-content">
+			<h1> Canchas cercanas a tu posicion </h1>
+			<h3>Indicaciones como llegar</h3>
+            <p id="geo-error"></p>
+			<ul id="listaCanchasCercanas" data-role="listview" data-inset="true">
+				
+			</ul>
+		</div>
+ 
+        <div data-role="footer" data-position="fixed">
+            <h4>Guillermo Polachek - 153924</h4>
+        </div>
+ 
+    </div>
+	<!-- /Canchas Cercanas -->
+	
+	<!-- Como Llegar -->
+    <div data-role="page" id="comoLlegar">
+ 
+        <div data-role="header" data-position="fixed">
+			<a href="#" data-icon="back" data-rel="back" title="Go back">Atrás</a>
+            <h1>Como Llegar - Organizador Futbolero</h1>
+			<a onclick='cerrar_sesion()' data-icon="user" class="ui-btn-right" title="Cerrar Sesion">Cerrar Sesion</a>
+        </div>
+ 
+        <div role="main" class="ui-content">
+			<h1 id="tit-cancha"></h1>
+			<a data-role="button" id="verCancha" data-inline="true">Ver Cancha</a>
+			
+			<div id="map-comollegar">Mapa</div>
+			<div id="instrucciones">Instrucciones</div>
+		</div>
+ 
+        <div data-role="footer" data-position="fixed">
+            <h4>Guillermo Polachek - 153924</h4>
+        </div>
+ 
+    </div>
+	<!-- /Como Llegar -->
+	
+
+    <!-- IMPORTANT: Do not include a weinre script tag as part of your release builds! -->
+    <!-- Place your remote debugging weinre script URL here, if it does not work below. -->
+
+    <!-- See <head> section above for additional JS libraries loaded as part of this application. -->
+
+    <!-- "Phantom" cordova.js required for projects that use Cordova plugins. -->
+    <script src="cordova.js"></script>
+
+    <!-- for your event code, see README and file comments for details -->
+    <script src="js/app.js"></script>
+    <!-- for your init code, see README and file comments for details -->
+    <script src="js/init-app.js"></script>
+    <!-- normalizes device and document ready events, see file for details -->
+    <script src="xdk/init-dev.js"></script>
+
+    <!-- IMPORTANT: Do not include a weinre script tag as part of your release builds! -->
+    <!-- Place your remote debugging weinre script URL here, if it does not work above. -->
+</body>
+
+<!--
+
+    Recommended JavaScript library load order for hybrid Cordova apps:
+
+    * "Device-Independent" JavaScript libraries.
+    * optional: weinre debug script tag for remote console debug (see notes).
+    * Intel XDK device JavaScript library.
+    * Cordova/PhoneGap device JavaScript library.
+    * "Device-Dependent" JavaScript libraries.
+    * Application JavaScript <script> tags and libraries.
+    * optional: weinre debug script tag for remote console debug (see notes).
+
+    In complex projects, the JavaScript load order is important. You must
+    insure that the underlying device API native code finishes its init, which
+    usually takes longer than the webview init...
+
+    VERY IMPORTANT: notice that all of the libraries used in this project are
+    located within the app's local directories, which means they will get
+    bundled with the app. They are NOT being pulled in over the net. In most
+    cases, this is what you should be doing when you build a hybrid mobile
+    app. This insures that you always use the JS code that you debugged
+    against AND that you are not requiring a data connection (network
+    connection) to get the app started. If your app startup required a data
+    connection to initialize and start interaction with the user, lack of a
+    reliable network connection could be disasterous. Not to mention it
+    generally results in a slower load time. Loading locally is much
+    friendlier to your end user's data plan and their device battery.  :-)
+
+    NOTE: do not use a directory prefix with the cordova.js file - it is
+    inserted automatically by the build system, simulator and other tools and
+    is assumed to be in the index.html source directory. You will not find
+    this JS file anywhere in your project, it is a "phantom" library. If you
+    do see copies of this file as part of your project it should be removed to
+    avoid confusion and problems.
+
+    LIBRARY NOTE: If you are using a large number of JavaScript libraries,
+    especially third-party libraries (like jQuery, {{ mustache }}, Underscore,
+    etc.) that are "independent" of the device APIs provided by the Cordova
+    library and plugins - and they are independent of your app code - your
+    app initialization will be most successful if you load these libraries
+    BEFORE the Cordova JS file, in the <head> section of your index.html file.
+    Obviously, any code that depends on Cordova APIs must be loaded AFTER the
+    cordova.js library.
+
+    Libraries that are "independent" of the device APIs are libraries that you
+    could use in a desktop browser. "Dependent" libraries are, most likely,
+    your own code that you've written specifically to work with the Cordova
+    device APIs. In some cases, if your device-dependent code requires access
+    to device-independent code to get started, you may have to use something
+    like CommonJS to force the device-dependent code to wait for the
+    device-independent code to initialize, otherwise you may have trouble
+    getting your app started.
+
+    Because of this added dependency on the underlying native code (device)
+    initialization, you should not use the "document ready" event to start
+    your application. You should wait for the cordova "deviceready" event
+    before you begin your application (if it uses any Cordova device APIs); in
+    practice, it is best to wait for both. (See the init-dev.js file in this
+    template for an example of how to wait for both, it generates a custom
+    "app.Ready" event that you can wait for and just forget about the other
+    events.)
+
+    NOTE: *any* library that redefines addEventListener() or fiddles with
+    outstanding events may interfere with capturing the Cordova "deviceready"
+    event and should, therefore, be placed *BEFORE* the Cordova JS library in
+    the load order.
+
+    ALSO: if you use weinre for debugging, you may have to experiment with the
+    placement of the weinre script. Some recommended locations are shown
+    within this app. If these locations do not work, you may have to
+    experiment. The optimum placement can be app-specific, primarily as a
+    function of the included JavaScript libraries and your initialization.
+
+-->
+
+</html>
